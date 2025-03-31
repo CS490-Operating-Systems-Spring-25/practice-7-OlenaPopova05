@@ -1,0 +1,125 @@
+label kernel_entry_point
+    copy FREE_MEMORY_END to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:sys_stack_ptr
+
+copy PROGRAM_COUNTER to var:sys_return
+jump label:sys_fs_init
+
+
+write "Enter the name of the first file: " to DISPLAY_BUFFER
+write OP_DISPLAY_LN to REG_OP
+cpu_exec
+
+write OP_READ_INPUT to REG_OP
+cpu_exec
+
+var file1
+copy KEYBOARD_BUFFER to var:file1
+
+write "Enter the name of the second file: " to DISPLAY_BUFFER
+write OP_DISPLAY_LN to REG_OP
+cpu_exec
+
+write OP_READ_INPUT to REG_OP
+cpu_exec
+
+var file2
+copy KEYBOARD_BUFFER to var:file2
+
+
+label counting
+    copy var:file1 to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_open
+
+    copy REG_ERROR to REG_A
+    write "Fail to open file" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:error
+
+    var file_desc1
+    copy REG_RES to var:file_desc1
+
+    copy var:file2 to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_open
+
+    copy REG_ERROR to REG_A
+    write "Fail to open file" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:error
+
+    var file_desc2
+    copy REG_RES to var:file_desc2
+
+    var counter
+    write 1 to var:counter
+    label loop
+        copy var:file_desc1 to REG_A
+        copy var:counter to REG_B
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_read
+        jump_err label:close
+
+        var line1
+        copy REG_RES to var:line1
+
+        copy var:file_desc2 to REG_A
+        copy var:counter to REG_B
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_read
+        jump_err label:close
+
+        var line2
+        copy REG_RES to var:line2
+
+        copy var:line1 to REG_A
+        copy var:line2 to REG_B
+        write OP_CMP_NEQ to REG_RES
+        cpu_exec
+
+        jump_if label:display_line
+
+        copy var:counter to REG_A
+        write OP_INCR to REG_OP
+        cpu_exec
+        copy REG_RES to var:counter
+        jump label:loop
+
+    label display_line
+        copy var:line1 to DISPLAY_BUFFER
+        write OP_DISPLAY_LN to REG_OP
+        cpu_exec
+
+        copy var:line2 to DISPLAY_BUFFER
+        write OP_DISPLAY_LN to REG_OP
+        cpu_exec
+
+        jump label:close
+
+    
+    label close
+        copy var:file_desc1 to REG_A
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_close
+
+        copy var:file_desc2 to REG_A
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_close
+
+        jump label:exit
+
+    label error
+        write "Error: no such file" to DISPLAY_BUFFER
+        write OP_DISPLAY_LN to REG_OP
+        cpu_exec
+        jump label:exit
+
+label exit 
+    write OP_HALT to REG_OP
+    cpu_exec
+
